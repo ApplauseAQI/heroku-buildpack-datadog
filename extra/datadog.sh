@@ -130,9 +130,15 @@ if [ -e "$PRERUN_SCRIPT" ]; then
   source "$PRERUN_SCRIPT"
 fi
 
+show_message () {
+  if [ "$DD_LOG_LEVEL" != "ERROR" ]; then
+    echo "$1"
+  fi
+}
+
 # Execute the final run logic.
 if [ -n "$DISABLE_DATADOG_AGENT" ]; then
-  echo "The Datadog Agent has been disabled. Unset the DISABLE_DATADOG_AGENT or set missing environment variables."
+  show_message "The Datadog Agent has been disabled. Unset the DISABLE_DATADOG_AGENT or set missing environment variables."
 else
   # Get the Agent version number
   DD_VERSION="$(expr "$(bash -c "LD_LIBRARY_PATH=\"$APT_DIR/opt/datadog-agent/embedded/lib:$LD_LIBRARY_PATH\" $DD_BIN_DIR/agent version")" : 'Agent \([0-9]\+\.[0-9]\+.[0-9]\+\)')"
@@ -146,20 +152,20 @@ else
   fi
 
   # Run the Datadog Agent
-  echo "Starting Datadog Agent on $DD_HOSTNAME"
+  show_message "Starting Datadog Agent on $DD_HOSTNAME"
   bash -c "PYTHONPATH=\"$DD_PYTHONPATH\" LD_LIBRARY_PATH=\"$APT_DIR/opt/datadog-agent/embedded/lib:$LD_LIBRARY_PATH\" $DD_BIN_DIR/agent $RUN_COMMAND -c $DATADOG_CONF 2>&1 &"
 
   # The Trace Agent will run by default.
   if [ "$DD_APM_ENABLED" == "false" ]; then
-    echo "The Datadog Trace Agent has been disabled. Set DD_APM_ENABLED to true or unset it."
+    show_message "The Datadog Trace Agent has been disabled. Set DD_APM_ENABLED to true or unset it."
   else
-    echo "Starting Datadog Trace Agent on $DD_HOSTNAME"
+    show_message "Starting Datadog Trace Agent on $DD_HOSTNAME"
     bash -c "$DD_DIR/embedded/bin/trace-agent -config $DATADOG_CONF 2>&1 &"
   fi
 
   # The Process Agent must be run explicitly
   if [ "$DD_PROCESS_AGENT" == "true" ]; then
-    echo "Starting Datadog Process Agent on $DD_HOSTNAME"
+    show_message "Starting Datadog Process Agent on $DD_HOSTNAME"
     bash -c "$DD_DIR/embedded/bin/process-agent -config $DATADOG_CONF 2>&1 &"
   fi
 fi
